@@ -1,0 +1,80 @@
+---
+ - hosts: script
+   remote_user: root
+   tasks:
+   - name: demo shell
+     shell: sh /root/config.sh
+       
+ - hosts: webc
+   remote_user: root
+   vars:
+   - admin: /root/server/psc_admin
+   - psc_c: /root/server/psc_c
+   tasks:
+   - name: backup psc_admin
+     shell: cp {{ admin }}/webapps/*.war {{ admin }}/backup/
+   - name: backup psc_c
+     shell: cp {{ psc_c }}/webapps/*.war {{ psc_c }}/backup/
+   - name: delete psc_admin
+     file: path= {{ admin }}/webapps/*.war state=absent
+   - name: delete psc_c
+     file: path= {{ psc_c }}/webapps/*.war state=absent
+   - name: stop tomcat
+     shell: ps -fe | grep tomcat | grep -v grep | awk '{print $2}' | xargs kill -9 
+   - name: copy psc_c file 
+     copy: src=/root/c/ {{ item }} dest={{ psc_c }}/webapps/
+     with_items:
+        - pscacc.war
+        - psccard.war
+        - pscpayment.war
+   - name: copy admin file 
+     copy: src=/root/c/ROOT.war dest={{ admin }}/webapps/
+ 
+ - hosts: webs
+   remote_user: root
+   vars:
+   - psc_s: /root/server/psc_s
+   - psc_sccp: /root/server/psc_scpp
+   tasks:
+   - name: backup psc_s
+     shell: cp {{ psc_s }}/webapps/*.war {{ psc_s }}/backup/
+   - name: backup psc_sccp
+     shell: cp {{ psc_sccp }}/webapps/*.war {{ psc_sccp }}/backup/
+   - name: delete psc_s
+     file: path= {{ psc_s }}/webapps/*.war state=absent
+   - name: delete psc_sccp
+     file: path= {{ psc_sccp }}/webapps/*.war state=absent
+   - name: stop tomcat
+     shell: ps -fe | grep tomcat | grep -v grep | awk '{print $2}' | xargs kill -9 
+   - name: copy psc_s file 
+     copy: src=/root/s/{{ item }} dest={{ psc_s }}/webapps/
+     with_items:
+        - psc-acc-s.war
+        - psc-card-s.war
+        - psc-payment-s.war
+   - name: copy psc_sccp file 
+     copy: src=/root/s/psc-sccp-S.war dest={{ psc_sccp }}/webapps/
+ 
+ - hosts: webs
+   remote_user: root
+   tasks:
+   - name: start tomcat psc_sccp wait 15S
+     shell: nohup /root/server/psc_scpp/bin/startup.sh &
+   - name: sleep 15
+     shell: sleep 15
+   - name: start tomcat psc_s wait 15S
+     shell: nohup /root/server/psc_s/bin/startup.sh &
+   - name: sleep 15
+     shell: sleep 15
+
+ - hosts: webc
+   remote_user: root
+   tasks:
+   - name: start tomcat psc_admin wait 15S
+     shell: nohup /root/server/psc_admin/bin/startup.sh &
+   - name: sleep 15
+     shell: sleep 15
+   - name: start tomcat psc_c wait 15S
+     shell: nohup /root/server/psc_c/bin/startup.sh &
+   - name: sleep 15
+     shell: sleep 15
